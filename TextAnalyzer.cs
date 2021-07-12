@@ -2,9 +2,9 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using System;
 
 namespace Text_Reader_Task
 {
@@ -53,9 +53,16 @@ namespace Text_Reader_Task
                 TotalLetters = letters.Values.Sum(),
                 Letters = letters.OrderByDescending(pair => pair.Value).ToDictionary(pair => pair.Key, pair => pair.Value)
             };
-            //StringBuilder json = new StringBuilder(JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
             StringBuilder json = new (JsonSerializer.Serialize(sortedInfo, new JsonSerializerOptions { WriteIndented = true }));
-            File.WriteAllText(fileName, json.ToString());
+            try
+            {
+                File.WriteAllText(fileName, json.ToString());
+                Console.WriteLine($"Successfully saved as {fileName}");
+            }
+            catch
+            {
+                Console.WriteLine("Error saving to file.");
+            }
         }
         private void AnalyzeLine(string line)
         {

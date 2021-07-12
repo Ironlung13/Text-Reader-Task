@@ -9,35 +9,48 @@ namespace Text_Reader_Task
         {
             if (args.Length != 1)
             {
-                Console.WriteLine("Failed to get text file name. Switching to manual input.");
-                ReadTextFile("War and Peace.txt");
+                Console.WriteLine("Invalid args.");
+                ManualReadTextFile();
             }
-        }
+            else 
+            {
+                try
+                {
+                    ReadTextFile(args[0]);
+                }
+                catch
+                {
+                    Console.WriteLine("Error reading from file. Switching to manual input.");
+                    ManualReadTextFile();
+                }
+            }
 
-        static void ReadTextFile()
-        {
-            Console.WriteLine("Enter text file name:");
-            string fileName = Console.ReadLine();
-            ReadTextFile(fileName);
+            Console.WriteLine("Program finished. Enter anything to exit.");
+            Console.ReadLine();
         }
-        static void ReadTextFile(string fileName)
+        static void ManualReadTextFile()
         {
+            string fileName = string.Empty;
+            while (!File.Exists(fileName))
+            {
+                Console.WriteLine("Error opening file.");
+                Console.Write("Enter file name/path: ");
+                fileName = Console.ReadLine();
+            }
             try
             {
-                string[] text = File.ReadAllLines(fileName);
-                TextAnalyzer analyzer = new TextAnalyzer(fileName);
-                analyzer.WriteAnalysisToFile("Result.txt");
-                analyzer.SerializeToJson("ResultsJson.json");
-            }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine($"File {fileName} not found.");
-                ReadTextFile();
+                ReadTextFile(fileName);
             }
             catch
             {
-                Console.WriteLine($"Error getting file.");
+                Console.WriteLine("Error reading from file. Switching to manual input.");
+                ManualReadTextFile();
             }
+        }
+        static void ReadTextFile(string fileName)
+        {
+            TextAnalyzer analyzer = new(fileName);
+            analyzer.SerializeToJson("ResultsJson.json");
         }
     }
 }
