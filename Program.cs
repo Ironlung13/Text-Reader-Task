@@ -25,8 +25,9 @@ namespace Text_Reader_Task
             try
             {
                 string[] text = File.ReadAllLines(fileName);
-                TextAnalyzer analyzer = new TextAnalyzer();
-                analyzer.WriteAnalysisToFile(fileName, "Result.txt");
+                TextAnalyzer analyzer = new TextAnalyzer(fileName);
+                analyzer.WriteAnalysisToFile("Result.txt");
+                analyzer.SerializeToJson("ResultsJson.json");
             }
             catch (FileNotFoundException)
             {

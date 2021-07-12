@@ -1,43 +1,63 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Text.RegularExpressions;
-using System.IO;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace Text_Reader_Task
 {
     public class TextAnalyzer
     {
-        private Dictionary<string, int> words = new Dictionary<string, int>();
-        private Dictionary<char, int> letters = new Dictionary<char, int>();
-        private int digits = 0;
-        private int numbers = 0;
-        private int lines = 0;
-        private int punctuation = 0;
-        private int wordsWithHyphen = 0;
+        private Dictionary<string, int> words = new();
+        private Dictionary<char, int> letters = new();
+        public string FileName { get; private set; }
+        public int Digits { get; private set; }
+        public int Numbers { get; private set; }
+        public int Lines { get; private set; }
+        public int Punctuation { get; private set; }
+        public int WordsWithHyphen { get; private set; }
 
-        public void WriteAnalysisToFile(string fileName, string outputFileName)
+        public TextAnalyzer(string fileName)
         {
-            ReadText(fileName);
-            using StreamWriter sw = File.CreateText(outputFileName);
-            sw.Write(GetResults());
+            ReadNewText(fileName);
         }
-        public void ReadText(string fileName)
+        public void ReadNewText(string fileName)
         {
+            ClearAnalyzer();
+            this.FileName = fileName;
             using (StreamReader sr = File.OpenText(fileName))
             {
                 while(sr.Peek() != -1)
                 {
                     AnalyzeLine(sr.ReadLine());
-                    lines++;
+                    Lines++;
                 }
             }
-
             CountLetters();
         }
-        public void AnalyzeLine(string line)
+        public void SerializeToJson(string fileName)
+        {
+            var sortedInfo = new
+            {
+                FileName,
+                Digits,
+                Numbers,
+                Lines,
+                Punctuation,
+                WordsWithHyphen,
+                TotalWords = words.Values.Sum(),
+                Words = words.OrderByDescending(pair => pair.Value).ToDictionary(pair => pair.Key, pair => pair.Value),
+                LongestWord = words.Keys.Where(x => x.Length == words.Keys.Max(y => y.Length)).First(),
+                TotalLetters = letters.Values.Sum(),
+                Letters = letters.OrderByDescending(pair => pair.Value).ToDictionary(pair => pair.Key, pair => pair.Value)
+            };
+            //StringBuilder json = new StringBuilder(JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+            StringBuilder json = new (JsonSerializer.Serialize(sortedInfo, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(fileName, json.ToString());
+        }
+        private void AnalyzeLine(string line)
         {
             string[] words = Regex.Split(line, @"(\w+[-’']*\w*)").Where(entry => !string.IsNullOrWhiteSpace(entry)).Select(word => word.ToLower()).ToArray();
             foreach(var word in words)
@@ -51,6 +71,17 @@ namespace Text_Reader_Task
                     AnalyzeNonWord(word);
                 }
             }
+        }
+        private void ClearAnalyzer()
+        {
+            words.Clear();
+            letters.Clear();
+            FileName = string.Empty;
+            Digits = 0;
+            Numbers = 0;
+            Lines = 0;
+            Punctuation = 0;
+            WordsWithHyphen = 0;
         }
         private void AddWordToDictionary(string word)
         {
@@ -67,7 +98,7 @@ namespace Text_Reader_Task
         {
             if (Regex.IsMatch(input, @"\w+-\w+"))
             {
-                wordsWithHyphen++;
+                WordsWithHyphen++;
                 string[] words = Regex.Split(input, @"-");
                 foreach(var word in words)
                 {
@@ -79,7 +110,6 @@ namespace Text_Reader_Task
                 AddWordToDictionary(input);
             }
         }
-
         private void AnalyzeNonWord(string input)
         {
             bool isNumber = false;
@@ -88,59 +118,17 @@ namespace Text_Reader_Task
                 if (char.IsDigit(ch))
                 {
                     isNumber = true;
-                    digits++;
+                    Digits++;
                 }
                 else if (!char.IsWhiteSpace(ch))
                 {
-                    punctuation++;
+                    Punctuation++;
                 }
             }
 
             if (isNumber == true)
-                numbers++;
+                Numbers++;
         }
-
-        private string GetResults()
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"Total letters: {letters.Values.Sum(x => x)}");
-            foreach (var letter in letters.OrderByDescending(x => x.Value))
-            {
-                sb.AppendLine($"{letter.Key} : {letter.Value}");
-            }
-            sb.AppendLine();
-
-            sb.AppendLine($"Total words: {words.Values.Sum(x => x)}");
-            foreach (var word in words.OrderByDescending(x => x.Value))
-            {
-                sb.AppendLine($"{word.Key} : {word.Value}");
-            }
-            sb.AppendLine();
-
-            var longest = words.Keys.Where(x => x.Length == words.Keys.Max(y => y.Length));
-            if (longest.Count() > 1)
-            {
-                sb.AppendLine($"Longest words:");
-            }
-            else
-            {
-                sb.AppendLine($"Longest word:");
-            }
-            foreach (var word in longest)
-            {
-                sb.AppendLine($"{word}");
-            }
-            sb.AppendLine();
-
-            sb.AppendLine($"Lines count: {lines}");
-            sb.AppendLine($"Digits count: {digits}");
-            sb.AppendLine($"Numbers count: {numbers}");
-            sb.AppendLine($"Punctuation count: {punctuation}");
-            sb.AppendLine($"Words with Hyphen: {wordsWithHyphen}");
-
-            return sb.ToString();
-        }
-
         private void CountLetters()
         {
             foreach(var key in words.Keys)
